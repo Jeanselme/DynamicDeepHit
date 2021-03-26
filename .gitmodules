@@ -1,0 +1,3 @@
+[submodule "DeepSurvivalMachines"]
+	path = DeepSurvivalMachines
+	url = git@github.com:autonlab/DeepSurvivalMachines.git
