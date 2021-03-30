@@ -49,8 +49,7 @@ def train_ddh(model,
 			best_param = deepcopy(model.state_dict())
 		else:
 			if patience == 2:
-				model.load_state_dict(best_param)
-				return model
+				break
 			else:
 				patience += 1
 

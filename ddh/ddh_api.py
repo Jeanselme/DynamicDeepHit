@@ -15,7 +15,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			DeepRecurrentSurvivalMachines ([type]): [description]
 	"""
 
-	def __init__(self, split = 10, layers_rnn = 1, typ = 'LSTM',
+	def __init__(self, split = 50, layers_rnn = 1, typ = 'LSTM',
 		hidden_long = 10, hidden_rnn = 10, hidden_att = 10, hidden_cs = 10,  
 		alpha = 1, beta = 1):
 
@@ -83,7 +83,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				List of Array: Disretized events time
 		"""
 		if split_time is None:
-			_, split_time = np.histogram(t, split)
+			_, split_time = np.histogram(t, split - 1)
 		t_discretized = np.digitize(t, split_time) - 1
 		return t_discretized, split_time
 
@@ -145,7 +145,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			forecast = forecast[int(risk) - 1]
 			scores = []
 			for t_ in t:
-				scores.append(torch.sum(forecast[:, :t_ + 1], dim = 1).unsqueeze(1))
+				scores.append(torch.sum(forecast[:, :t_+1], dim = 1).unsqueeze(1))
 			return torch.cat(scores, dim = 1).detach().numpy()
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
