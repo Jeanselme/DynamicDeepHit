@@ -58,7 +58,7 @@ def total_loss(model, x, t, e, alpha, beta):
 
     # Compute cumulative function from prediced outcomes
     # max_time = output_dim
-    cif = torch.zeros((x.size(0), model.risks))
+    cif = torch.zeros((x.size(0), model.risks)).to(x.get_device())
     
     for k in range(model.risks):
         for i, (ti, oi) in enumerate(zip(t, outcomes[k])):

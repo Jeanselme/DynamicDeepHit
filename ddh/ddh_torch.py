@@ -60,6 +60,18 @@ class DynamicDeepHitTorch(nn.Module):
 
 		# Probability
 		self.soft = nn.Softmax(dim = -1) # On all observed output
+        
+	def cuda(self):
+		super(DynamicDeepHitTorch, self).cuda()
+		for r in range(self.risks):
+			self.cause_specific[r].cuda()
+		return self
+
+	def cpu(self):
+		super(DynamicDeepHitTorch, self).cpu()
+		for r in range(self.risks):
+			self.cause_specific[r].cpu()
+		return self
 
 	def forward(self, x):
 		"""

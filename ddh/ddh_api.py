@@ -23,7 +23,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			self.split = split
 			self.split_time = None
 		else:
-			self.split = len(split)
+			self.split = len(split) - 1
 			self.split_time = split
 
 		self.layers_rnn = layers_rnn
