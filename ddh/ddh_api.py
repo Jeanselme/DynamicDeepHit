@@ -17,7 +17,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 
 	def __init__(self, split = 50, layers_rnn = 1, typ = 'LSTM',
 		hidden_long = 10, hidden_rnn = 10, hidden_att = 10, hidden_cs = 10,  
-		alpha = 1, beta = 1):
+		alpha = 1, beta = 1, cuda = False):
 
 		if isinstance(split, int):
 			self.split = split
@@ -36,13 +36,23 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		self.alpha = alpha
 		self.beta = beta
 
+		self.cuda = cuda
 		self.fitted = False
 		  
 	def _gen_torch_model(self, inputdim, optimizer, risks):
-		return DynamicDeepHitTorch(inputdim, self.split, self.layers_rnn, 
+		model = DynamicDeepHitTorch(inputdim, self.split, self.layers_rnn, 
 								   self.hidden_long, self.hidden_rnn, 
 								   self.hidden_att, self.hidden_cs,
 								   self.typ, optimizer, risks).double()
+		if self.cuda:
+			model = model.cuda()
+		return model
+
+	def cpu(self):
+		self.cuda = False
+		if self.torch_model:
+			self.torch_model = self.torch_model.cpu()
+		return self
 
 	def fit(self, x, t, e, vsize = 0.15, val_data = None,
 		  iters = 1, learning_rate = 1e-3, batch_size = 100,
@@ -63,10 +73,12 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 					self.alpha, self.beta, 
 					n_iter = iters,
 					lr = learning_rate,
-					bs = batch_size)
+					bs = batch_size,
+					cuda = self.cuda)
 
 		self.torch_model = model.eval()
 		self.fitted = True
+		self.cpu()
 
 		return self  
 
@@ -86,6 +98,12 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			_, split_time = np.histogram(t, split - 1)
 		t_discretized = np.digitize(t, split_time) - 1
 		return t_discretized, split_time
+
+	def _prepocess_test_data(self, x):
+		data = torch.from_numpy(_get_padded_features(x))
+		if self.cuda:
+			data = data.cuda()
+		return data
 
 	def _prepocess_training_data(self, x, t, e, vsize, val_data, random_state):
 		"""RNNs require different preprocessing for variable length sequences"""
@@ -120,7 +138,6 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			x_val = torch.from_numpy(x_val).double()
 			t_val = torch.from_numpy(t_val).double()
 			e_val = torch.from_numpy(e_val).double()
-
 
 		return (x_train, t_train, e_train,				
 				x_val, t_val, e_val)
