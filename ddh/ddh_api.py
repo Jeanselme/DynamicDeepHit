@@ -58,8 +58,6 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		  iters = 1, learning_rate = 1e-3, batch_size = 100,
 		  optimizer = "Adam", random_state = 100):
 		discretized_t, self.split_time = self.discretize(t, self.split, self.split_time)
-		if not(val_data is None):
-			val_data[1], _ = self.discretize(val_data[1], self.split, self.split_time)
 		processed_data = self._prepocess_training_data(x, discretized_t, e,
 													vsize, val_data,
 													random_state)
@@ -126,7 +124,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			vsize = int(vsize*x_train.shape[0])
 
 			x_val, t_val, e_val = x_train[-vsize:], t_train[-vsize:], e_train[-vsize:]
-
+            
 			x_train = x_train[:-vsize]
 			t_train = t_train[:-vsize]
 			e_train = e_train[:-vsize]
@@ -136,6 +134,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			x_val, t_val, e_val = val_data
 
 			x_val = _get_padded_features(x_val)
+			t_val, _ = self.discretize(t_val, self.split, self.split_time)
 
 			x_val = torch.from_numpy(x_val).double()
 			t_val = torch.from_numpy(t_val).double()
