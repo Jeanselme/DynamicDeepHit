@@ -12,4 +12,3 @@ An example is available in the `examples` folder.
 
 ## TODOs
 - Full documentation
-- Cuda 
