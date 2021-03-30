@@ -146,7 +146,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			scores = []
 			for t_ in t:
 				scores.append(torch.sum(forecast[:, :t_+1], dim = 1).unsqueeze(1))
-			return torch.cat(scores, dim = 1).detach().numpy()
+			return 1 - torch.cat(scores, dim = 1).detach().numpy()
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
 							"model using the `fit` method on some training data " +
