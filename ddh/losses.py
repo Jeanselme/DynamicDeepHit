@@ -55,10 +55,15 @@ def longitudinal_loss(longitudinal_prediction, x):
 def total_loss(model, x, t, e, alpha, beta):
     longitudinal_prediction, outcomes = model(x)
     t, e = t.int(), e.int()
+    
+    if x.is_cuda:
+        device = x.get_device()
+    else:
+        device = torch.device("cpu")
 
     # Compute cumulative function from prediced outcomes
     # max_time = output_dim
-    cif = torch.zeros((x.size(0), model.risks)).to(x.get_device())
+    cif = torch.zeros((x.size(0), model.risks)).to(device)
     
     for k in range(model.risks):
         for i, (ti, oi) in enumerate(zip(t, outcomes[k])):
