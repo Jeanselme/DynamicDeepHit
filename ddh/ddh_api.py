@@ -96,7 +96,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		"""
 		if split_time is None:
 			_, split_time = np.histogram(t, split - 1)
-		t_discretized = np.digitize(t, split_time) - 1
+		t_discretized = np.digitize(t, split_time, right = True) - 1
 		return t_discretized, split_time
 
 	def _prepocess_test_data(self, x):
@@ -151,7 +151,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		discretized_t, _ = self.discretize(t, self.split, self.split_time)
 		processed_data = self._prepocess_training_data(x, discretized_t, e, 0, None, 0)
 		_, _, _, x_val, t_val, e_val = processed_data
-		return total_loss(self.torch_model, x_val, t_val, e_val, self.alpha, self.beta)
+		return total_loss(self.torch_model, x_val, t_val, e_val, self.alpha, self.beta).item()
 
 	def predict_survival(self, x, t, risk=1):
 		x = self._prepocess_test_data(x)
