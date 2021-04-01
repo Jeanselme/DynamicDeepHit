@@ -1,4 +1,3 @@
-from ddh.ddh_torch import DynamicDeepHitTorch
 from ddh.losses import total_loss
 from dsm.utilities import get_optimizer, _reshape_tensor_with_nans
 
