@@ -58,20 +58,10 @@ class DynamicDeepHitTorch(nn.Module):
 							nn.Linear(hidden_cs, output_dim, bias=True)
 						).double())
 
+		self.cause_specific = nn.ModuleList(self.cause_specific)
+
 		# Probability
 		self.soft = nn.Softmax(dim = -1) # On all observed output
-        
-	def cuda(self):
-		super(DynamicDeepHitTorch, self).cuda()
-		for r in range(self.risks):
-			self.cause_specific[r].cuda()
-		return self
-
-	def cpu(self):
-		super(DynamicDeepHitTorch, self).cpu()
-		for r in range(self.risks):
-			self.cause_specific[r].cpu()
-		return self
 
 	def forward(self, x):
 		"""
