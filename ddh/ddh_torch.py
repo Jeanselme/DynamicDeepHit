@@ -88,7 +88,7 @@ class DynamicDeepHitTorch(nn.Module):
 
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
-		last_observations_idx = ~inputmask.sum(axis = 1)
+		last_observations_idx = (~inputmask).sum(axis = 1)
 		last_observations = torch.cat([x[i, j - 1].repeat(1, x.size(1), 1) for i, j in enumerate(last_observations_idx)], 0) 
 
 		## Concatenate all previous with new to measure attention
