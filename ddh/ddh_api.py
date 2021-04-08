@@ -60,6 +60,9 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		  iters = 1, learning_rate = 1e-3, batch_size = 100,
 		  optimizer = "Adam", random_state = 100):
 		t, e = last(t), last(e)
+		if not(val_data is None):
+			val_data = val_data[0], last(val_data[1]), last(val_data[2])
+
 		discretized_t, self.split_time = self.discretize(t, self.split, self.split_time)
 		processed_data = self._prepocess_training_data(x, discretized_t, e,
 													vsize, val_data,
