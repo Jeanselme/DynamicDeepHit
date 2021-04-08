@@ -85,7 +85,7 @@ class DynamicDeepHitTorch(nn.Module):
 		concatenation = torch.cat([hidden, last_observations], -1)
 
 		## Compute attention and normalize
-		attention = self.attention(concatenation).squeeze()
+		attention = self.attention(concatenation).squeeze(-1)
 		attention[inputmask] = -10**(10) # Want soft max to be zero as values not observed
 		attention = self.attention_soft(attention)
 
