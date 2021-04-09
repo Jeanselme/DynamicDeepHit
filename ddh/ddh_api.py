@@ -155,7 +155,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		_, _, _, x_val, t_val, e_val = processed_data
 		return total_loss(self.torch_model, x_val, t_val, e_val, self.alpha, self.beta).item()
 
-	def predict_survival(self, x, t, risk=1, all_step=False):
+	def predict_survival(self, x, t, risk=1, all_step=False, bs=100):
 		l = [len(x_) for x_ in x]
 
 		if all_step:
@@ -170,11 +170,15 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		t = self.discretize([t], self.split_time)[0][0]
 
 		if self.fitted:
-			_, forecast = self.torch_model(x)
-			forecast = forecast[int(risk) - 1]
+			batches = int(x.shape[0]/bs) + 1
+			forecast = []
+			for j in range(batches):
+				xb = x[j*bs:(j+1)*bs]
+				_, f = self.torch_model(xb)
+				forecast.append(f[int(risk) - 1])
 			scores = []
 			for t_ in t:
-				scores.append(torch.sum(forecast[:, :t_+1], dim = 1).unsqueeze(1))
+				scores.append(torch.sum(torch.cat(forecast, dim = 0)[:, :t_+1], dim = 1).unsqueeze(1))
 			return 1 - torch.cat(scores, dim = 1).detach().numpy()
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
