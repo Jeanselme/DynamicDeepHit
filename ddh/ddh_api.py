@@ -164,22 +164,20 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				new_x += [x_[:li + 1] for li in range(l_)]
 			x = new_x
 
-		x = self._prepocess_test_data(x)
 		if not isinstance(t, list):
 			t = [t]
 		t = self.discretize([t], self.split_time)[0][0]
 
 		if self.fitted:
-			batches = int(x.shape[0]/bs) + 1
-			forecast = []
+			batches = int(len(x)/bs) + 1
+			scores = {t_: [] for t_ in t}
 			for j in range(batches):
-				xb = x[j*bs:(j+1)*bs]
+				xb = self._prepocess_test_data(x[j*bs:(j+1)*bs])
 				_, f = self.torch_model(xb)
-				forecast.append(f[int(risk) - 1])
-			scores = []
-			for t_ in t:
-				scores.append(torch.sum(torch.cat(forecast, dim = 0)[:, :t_+1], dim = 1).unsqueeze(1))
-			return 1 - torch.cat(scores, dim = 1).detach().numpy()
+				for t_ in t:
+					scores[t_].append(torch.sum(f[int(risk) - 1][:, :t_+1], dim = 1).unsqueeze(1))
+			
+			return 1 - torch.cat([torch.cat(scores[t_], dim = 0) for t_ in t], dim = 1).detach().numpy()
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
 							"model using the `fit` method on some training data " +
