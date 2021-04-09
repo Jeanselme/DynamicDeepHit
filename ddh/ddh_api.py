@@ -59,12 +59,8 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 	def fit(self, x, t, e, vsize = 0.15, val_data = None,
 		  iters = 1, learning_rate = 1e-3, batch_size = 100,
 		  optimizer = "Adam", random_state = 100):
-		t, e = last(t), last(e)
-		if not(val_data is None):
-			val_data = val_data[0], last(val_data[1]), last(val_data[2])
-
 		discretized_t, self.split_time = self.discretize(t, self.split, self.split_time)
-		processed_data = self._prepocess_training_data(x, discretized_t, e,
+		processed_data = self._prepocess_training_data(x, last(discretized_t), last(e),
 													vsize, val_data,
 													random_state)
 		x_train, t_train, e_train, x_val, t_val, e_val = processed_data
@@ -101,11 +97,8 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				List of Array: Disretized events time
 		"""
 		if split_time is None:
-			_, split_time = np.histogram(t, split - 1)
-		try:
-			t_discretized = np.digitize(t, split_time, right = True) - 1
-		except:
-			t_discretized = [np.digitize(t_, split_time, right = True) - 1 for t_ in t]
+			_, split_time = np.histogram(np.concatenate(t), split - 1)
+		t_discretized = np.array([np.digitize(t_, split_time, right = True) - 1 for t_ in t], dtype = object)
 		return t_discretized, split_time
 
 	def _prepocess_test_data(self, x):
@@ -146,8 +139,8 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			t_val, _ = self.discretize(t_val, self.split, self.split_time)
 
 			x_val = torch.from_numpy(x_val).double()
-			t_val = torch.from_numpy(t_val).double()
-			e_val = torch.from_numpy(e_val).double()
+			t_val = torch.from_numpy(last(t_val)).double()
+			e_val = torch.from_numpy(last(e_val)).double()
 
 		return (x_train, t_train, e_train,				
 				x_val, t_val, e_val)
@@ -157,9 +150,8 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			raise Exception("The model has not been fitted yet. Please fit the " +
 									"model using the `fit` method on some training data " +
 									"before calling `_eval_nll`.")
-		t, e = last(t), last(e)
 		discretized_t, _ = self.discretize(t, self.split, self.split_time)
-		processed_data = self._prepocess_training_data(x, discretized_t, e, 0, None, 0)
+		processed_data = self._prepocess_training_data(x, last(discretized_t), last(e), 0, None, 0)
 		_, _, _, x_val, t_val, e_val = processed_data
 		return total_loss(self.torch_model, x_val, t_val, e_val, self.alpha, self.beta).item()
 
@@ -175,7 +167,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		x = self._prepocess_test_data(x)
 		if not isinstance(t, list):
 			t = [t]
-		t, _ = self.discretize(t, self.split_time)
+		t = self.discretize([t], self.split_time)[0][0]
 
 		if self.fitted:
 			_, forecast = self.torch_model(x)
