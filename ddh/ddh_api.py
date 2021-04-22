@@ -14,12 +14,12 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		The CIF is therefore simplified
 
 		Args:
-			DeepRecurrentSurvivalMachines ([type]): [description]
+			DeepRecurrentSurvivalMachines
 	"""
 
-	def __init__(self, split = 50, layers_rnn = 1, typ = 'LSTM',
-		hidden_long = 10, hidden_rnn = 10, hidden_att = 10, hidden_cs = 10,  
-		alpha = 1, beta = 1, cuda = False):
+	def __init__(self, split = 50, layers_rnn = 1, hidden_rnn = 10, typ = 'LSTM',
+		long_param = {}, att_param = {}, cs_param = {},
+		alpha = 0.1, beta = 0.1, sigma = 0.1, cuda = False):
 
 		if isinstance(split, int):
 			self.split = split
@@ -29,23 +29,24 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 			self.split_time = split
 
 		self.layers_rnn = layers_rnn
-		self.typ = typ
-		self.hidden_long = hidden_long
 		self.hidden_rnn = hidden_rnn
-		self.hidden_att = hidden_att
-		self.hidden_cs = hidden_cs
+		self.typ = typ
+		
+		self.long_param = long_param
+		self.att_param = att_param
+		self.cs_param = cs_param
 
 		self.alpha = alpha
 		self.beta = beta
+		self.sigma = sigma
 
 		self.cuda = cuda
 		self.fitted = False
 		  
 	def _gen_torch_model(self, inputdim, optimizer, risks):
-		model = DynamicDeepHitTorch(inputdim, self.split, self.layers_rnn, 
-								   self.hidden_long, self.hidden_rnn, 
-								   self.hidden_att, self.hidden_cs,
-								   self.typ, optimizer, risks).double()
+		model = DynamicDeepHitTorch(inputdim, self.split, self.layers_rnn, self.hidden_rnn,
+				long_param = self.long_param, att_param = self.att_param, cs_param = self.cs_param,
+				typ = self.typ, optimizer = optimizer, risks = risks).double()
 		if self.cuda:
 			model = model.cuda()
 		return model

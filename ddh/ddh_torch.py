@@ -1,11 +1,12 @@
 import torch.nn as nn
 import torch
 import numpy as np
+from .utils import create_nn
 
 class DynamicDeepHitTorch(nn.Module):
 
 	def __init__(self, input_dim, output_dim, layers_rnn,
-				hidden_long, hidden_rnn, hidden_att, hidden_cs,
+				hidden_rnn, long_param = {}, att_param = {}, cs_param = {},
 				typ = 'LSTM', optimizer = 'Adam', risks = 1):
 		super(DynamicDeepHitTorch, self).__init__()
 
@@ -28,36 +29,16 @@ class DynamicDeepHitTorch(nn.Module):
 								bias=False, batch_first=True)
 
 		# Longitudinal network
-		self.longitudinal = nn.Sequential(
-							nn.Linear(hidden_rnn, hidden_long, bias=True),
-							nn.ReLU6(),
-							nn.Linear(hidden_long, hidden_long, bias=True),
-							nn.ReLU6(),
-							nn.Linear(hidden_long, input_dim, bias=True),
-						)
+		self.longitudinal = create_nn(hidden_rnn, input_dim, **long_param)
 
 		# Attention mechanism
-		self.attention = nn.Sequential(
-							nn.Linear(input_dim + hidden_rnn, hidden_att, bias=True),
-							nn.ReLU6(),
-							nn.Linear(hidden_att, hidden_att, bias=True),
-							nn.ReLU6(),
-							nn.Linear(hidden_att, 1, bias=True),
-						)
+		self.attention = create_nn(input_dim + hidden_rnn, 1, **att_param)
 		self.attention_soft = nn.Softmax(1) # On temporal dimension
 
 		# Cause specific network
 		self.cause_specific = []
 		for r in range(self.risks):
-			self.cause_specific.append(
-						nn.Sequential(
-							nn.Linear(hidden_rnn, hidden_cs, bias=True), 
-							nn.ReLU6(),
-							nn.Linear(hidden_cs, hidden_cs, bias=True),
-							nn.ReLU6(),
-							nn.Linear(hidden_cs, output_dim, bias=True)
-						).double())
-
+			self.cause_specific.append(create_nn(hidden_rnn, output_dim, **cs_param))
 		self.cause_specific = nn.ModuleList(self.cause_specific)
 
 		# Probability
@@ -86,9 +67,8 @@ class DynamicDeepHitTorch(nn.Module):
 
 		## Compute attention and normalize
 		attention = self.attention(concatenation).squeeze(-1)
-		attention[inputmask] = -10**(10) # Want soft max to be zero as values not observed
+		attention[inputmask] = -1e10 # Want soft max to be zero as values not observed
 		attention = self.attention_soft(attention)
-
 
 		# Risk networks
 		outcomes = []

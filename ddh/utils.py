@@ -2,6 +2,7 @@ from ddh.losses import total_loss
 from dsm.utilities import get_optimizer, _reshape_tensor_with_nans
 
 import torch
+import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
@@ -9,7 +10,7 @@ from copy import deepcopy
 def train_ddh(model,
 			  x_train, t_train, e_train,
 			  x_valid, t_valid, e_valid,
-			  alpha, beta,
+			  alpha, beta, sigma,
 			  n_iter = 10000, lr = 1e-3,
 			  bs = 100, cuda = False):
 
@@ -20,6 +21,7 @@ def train_ddh(model,
 	valbatches = int(x_valid.shape[0]/bs) + 1
 
 	for i in tqdm(range(n_iter)):
+		model.train()
 		for j in range(nbatches):
 			xb = x_train[j*bs:(j+1)*bs]
 			tb = t_train[j*bs:(j+1)*bs]
@@ -36,10 +38,11 @@ def train_ddh(model,
 							  xb,
 							  tb,
 							  eb,
- 							  alpha, beta)
+ 							  alpha, beta, sigma)
 			loss.backward()
 			optimizer.step()
 
+		model.eval()
 		valid_loss = 0
 		for j in range(valbatches):
 			xb = x_valid[j*bs:(j+1)*bs]
@@ -53,7 +56,7 @@ def train_ddh(model,
 									xb,
 									tb,
 									eb,
-									alpha, beta)
+									alpha, beta, sigma)
 
 		valid_loss = valid_loss.item()
 		if valid_loss < old_loss:
@@ -61,10 +64,32 @@ def train_ddh(model,
 			old_loss = valid_loss
 			best_param = deepcopy(model.state_dict())
 		else:
-			if patience == 2:
+			if patience == 5:
 				break
 			else:
 				patience += 1
 
 	model.load_state_dict(best_param)
 	return model
+
+def create_nn(inputdim, outputdim, dropout = 0.6, layers = [100, 100], activation = 'ReLU'):
+	modules = []
+	if dropout > 0:
+		modules.append(nn.Dropout(p = dropout))
+
+	if activation == 'ReLU6':
+		act = nn.ReLU6()
+	elif activation == 'ReLU':
+		act = nn.ReLU()
+	elif activation == 'SeLU':
+		act = nn.SELU()
+	elif activation == 'Tanh':
+		act = nn.Tanh()
+
+	prevdim = inputdim
+	for hidden in layers + [outputdim]:
+		modules.append(nn.Linear(prevdim, hidden, bias = True))
+		modules.append(act)
+		prevdim = hidden
+
+	return nn.Sequential(*modules)

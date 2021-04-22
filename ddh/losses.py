@@ -17,7 +17,7 @@ def negative_log_likelihood(outcomes, cif, t, e):
 
     return - loss
 
-def ranking_loss(outcomes, cif, t, e):
+def ranking_loss(outcomes, cif, t, e, sigma):
     """
         Penalize wrong ordering of probability
         Equivalent to a C Index
@@ -28,7 +28,7 @@ def ranking_loss(outcomes, cif, t, e):
         for ci, ti in zip(cif[e-1 == k][:, k], t[e-1 == k]):
             # For all events: all patients that didn't experience event before
             # must have a lower risk for that cause
-            loss += torch.sum(torch.DoubleTensor([torch.exp(- ci + torch.sum(oj[:ti+1])) for oj in outcomes[k][t > ti]]))
+            loss += torch.sum(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
 
     return loss
 
@@ -52,7 +52,7 @@ def longitudinal_loss(longitudinal_prediction, x):
     observations = torch.cat([x[i, 1:l] for i, l in enumerate(length)], 0) 
     return torch.nn.MSELoss(reduction = 'sum')(predictions, observations)
 
-def total_loss(model, x, t, e, alpha, beta):
+def total_loss(model, x, t, e, alpha, beta, sigma):
     longitudinal_prediction, outcomes = model(x)
     t, e = t.int(), e.int()
     
@@ -69,6 +69,6 @@ def total_loss(model, x, t, e, alpha, beta):
         for i, (ti, oi) in enumerate(zip(t, outcomes[k])):
             cif[i, k] = torch.sum(oi[:ti+1])
 
-    return longitudinal_loss(longitudinal_prediction, x) +\
-              alpha * ranking_loss(outcomes, cif, t, e) +\
+    return (1 - alpha - beta) * longitudinal_loss(longitudinal_prediction, x) +\
+              alpha * ranking_loss(outcomes, cif, t, e, sigma) +\
               beta * negative_log_likelihood(outcomes, cif, t, e)
