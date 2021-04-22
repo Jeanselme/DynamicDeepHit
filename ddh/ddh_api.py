@@ -73,7 +73,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		model = train_ddh(model,
 					x_train, t_train, e_train,
 					x_val, t_val, e_val,
-					self.alpha, self.beta, 
+					self.alpha, self.beta, self.sigma, 
 					n_iter = iters,
 					lr = learning_rate,
 					bs = batch_size,
