@@ -5,17 +5,15 @@ def negative_log_likelihood(outcomes, cif, t, e):
         Compute the log likelihood loss 
         This function is used to compute the survival loss
     """
-    loss = 0
-
     # Censored
-    loss += torch.sum(torch.log(1 - torch.sum(cif[e == 0], axis = 1) + 1e-10))
+    loss = torch.sum(torch.log(1 - torch.sum(cif[e == 0], axis = 1) + 1e-10))
 
     # Uncensored
     for i, (ei, ti) in enumerate(zip(e, t)):
         if ei > 0:
             loss += torch.log(outcomes[ei-1][i, ti] + 1e-10)
 
-    return - loss
+    return - loss / len(outcomes)
 
 def ranking_loss(outcomes, cif, t, e, sigma):
     """
@@ -28,9 +26,9 @@ def ranking_loss(outcomes, cif, t, e, sigma):
         for ci, ti in zip(cif[e-1 == k][:, k], t[e-1 == k]):
             # For all events: all patients that didn't experience event before
             # must have a lower risk for that cause
-            loss += torch.sum(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
+            loss += torch.mean(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
 
-    return loss
+    return loss / len(outcomes)
 
 def longitudinal_loss(longitudinal_prediction, x):
     """
@@ -50,7 +48,7 @@ def longitudinal_loss(longitudinal_prediction, x):
 
     # Select all observations that can be predicted
     observations = torch.cat([x[i, 1:l] for i, l in enumerate(length)], 0) 
-    return torch.nn.MSELoss(reduction = 'sum')(predictions, observations)
+    return torch.nn.MSELoss(reduction = 'mean')(predictions, observations)
 
 def total_loss(model, x, t, e, alpha, beta, sigma):
     longitudinal_prediction, outcomes = model(x)

@@ -154,7 +154,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		discretized_t, _ = self.discretize(t, self.split, self.split_time)
 		processed_data = self._prepocess_training_data(x, last(discretized_t), last(e), 0, None, 0)
 		_, _, _, x_val, t_val, e_val = processed_data
-		return total_loss(self.torch_model, x_val, t_val, e_val, self.alpha, self.beta, self.sigma).item()
+		return total_loss(self.torch_model, x_val, t_val, e_val, 0, 1, 1).item()
 
 	def predict_survival(self, x, t, risk=1, all_step=False, bs=100):
 		l = [len(x_) for x_ in x]
