@@ -49,6 +49,9 @@ def train_ddh(model,
 			tb = t_valid[j*bs:(j+1)*bs]
 			eb = e_valid[j*bs:(j+1)*bs]
 
+			if xb.shape[0] == 0:
+				continue
+
 			if cuda:
 				xb, tb, eb = xb.cuda(), tb.cuda(), eb.cuda()
 			
