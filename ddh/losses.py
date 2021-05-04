@@ -26,7 +26,8 @@ def ranking_loss(outcomes, cif, t, e, sigma):
         for ci, ti in zip(cif[e-1 == k][:, k], t[e-1 == k]):
             # For all events: all patients that didn't experience event before
             # must have a lower risk for that cause
-            loss += torch.mean(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
+            if len(outcomes[k][t > ti]) > 0:
+                loss += torch.mean(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
 
     return loss / len(outcomes)
 
