@@ -48,6 +48,11 @@ class DynamicDeepHitTorch(nn.Module):
 		"""
 			The forward function that is called when data is passed through DynamicDeepHit.
 		"""
+		if x.is_cuda:
+			device = x.get_device()
+		else:
+			device = torch.device("cpu")
+
 		# RNN representation - Nan values for not observed data
 		x = x.clone()
 		inputmask = torch.isnan(x[:, :, 0])
@@ -60,7 +65,7 @@ class DynamicDeepHitTorch(nn.Module):
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
 		last_observations_idx = ((~inputmask).sum(axis = 1) - 1).unsqueeze(1).repeat(1, x.size(1))
-		index = torch.arange(x.size(1)).repeat(x.size(0), 1)
+		index = torch.arange(x.size(1)).repeat(x.size(0), 1).to(device)
 		last = index == last_observations_idx
 
 		## Concatenate all previous with new to measure attention
