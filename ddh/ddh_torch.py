@@ -60,9 +60,14 @@ class DynamicDeepHitTorch(nn.Module):
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
 		last_observations_idx = (~inputmask).sum(axis = 1)
-		last_observations = torch.cat([x[i, j - 1].repeat(1, x.size(1), 1) for i, j in enumerate(last_observations_idx)], 0) 
+		last_observations, last_hidden = [], []
 		for i, j in enumerate(last_observations_idx):
-			inputmask[i, j - 1] = True # Ignore last observation in the attention
+			last_observations.append(x[i, j - 1].repeat(1, x.size(1), 1))
+			last_hidden.append(hidden[i, j - 1])
+			inputmask[i, j - 1] = True
+
+		last_observations = torch.cat(last_observations, 0) 
+		last_hidden = torch.stack(last_hidden)
 
 		## Concatenate all previous with new to measure attention
 		concatenation = torch.cat([hidden, last_observations], -1)
@@ -77,8 +82,7 @@ class DynamicDeepHitTorch(nn.Module):
 		# combined with the temporal sum, we are using the hidden state
 		outcomes = []
 		attention = attention.unsqueeze(2).repeat(1, 1, hidden.size(2))
-		hidden_attentive = torch.sum(attention * hidden, axis = 1) 
-		hidden_attentive += torch.stack([hidden[i, j - 1] for i, j in enumerate(last_observations_idx)]) # Add skip connection
+		hidden_attentive = torch.sum(attention * hidden, axis = 1) + last_hidden
 		for cs_nn in self.cause_specific:
 			outcomes.append(cs_nn(hidden_attentive))
 
