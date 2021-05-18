@@ -59,22 +59,16 @@ class DynamicDeepHitTorch(nn.Module):
 
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
-		last_observations_idx = (~inputmask).sum(axis = 1)
-		last_observations, last_hidden = [], []
-		for i, j in enumerate(last_observations_idx):
-			last_observations.append(x[i, j - 1].repeat(1, x.size(1), 1))
-			last_hidden.append(hidden[i, j - 1])
-			inputmask[i, j - 1] = True
-
-		last_observations = torch.cat(last_observations, 0) 
-		last_hidden = torch.stack(last_hidden)
+		last_observations_idx = ((~inputmask).sum(axis = 1) - 1).unsqueeze(1).tile(x.size(1))
+		index = torch.arange(x.size(1)).repeat(x.size(0), 1)
+		last = index == last_observations_idx
 
 		## Concatenate all previous with new to measure attention
-		concatenation = torch.cat([hidden, last_observations], -1)
+		concatenation = torch.cat([hidden, x[last].unsqueeze(1).repeat(1, x.size(1), 1)], -1)
 
 		## Compute attention and normalize
 		attention = self.attention(concatenation).squeeze(-1)
-		attention[inputmask] = -1e10 # Want soft max to be zero as values not observed
+		attention[index >= last_observations_idx] = -1e10 # Want soft max to be zero as values not observed
 		attention = self.attention_soft(attention)
 
 		# Risk networks
@@ -82,7 +76,8 @@ class DynamicDeepHitTorch(nn.Module):
 		# combined with the temporal sum, we are using the hidden state
 		outcomes = []
 		attention = attention.unsqueeze(2).repeat(1, 1, hidden.size(2))
-		hidden_attentive = torch.sum(attention * hidden, axis = 1) + last_hidden
+		hidden_attentive = torch.sum(attention * hidden, axis = 1)
+		hidden_attentive += hidden[last]
 		for cs_nn in self.cause_specific:
 			outcomes.append(cs_nn(hidden_attentive))
 
