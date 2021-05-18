@@ -59,7 +59,7 @@ class DynamicDeepHitTorch(nn.Module):
 
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
-		last_observations_idx = ((~inputmask).sum(axis = 1) - 1).unsqueeze(1).tile(x.size(1))
+		last_observations_idx = ((~inputmask).sum(axis = 1) - 1).unsqueeze(1).repeat(1, x.size(1))
 		index = torch.arange(x.size(1)).repeat(x.size(0), 1)
 		last = index == last_observations_idx
 
