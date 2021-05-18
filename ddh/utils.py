@@ -75,7 +75,7 @@ def train_ddh(model,
 	model.load_state_dict(best_param)
 	return model
 
-def create_nn(inputdim, outputdim, dropout = 0.6, layers = [100, 100], activation = 'ReLU'):
+def create_nn(inputdim, outputdim, dropout = 0.6, layers = [100, 100], activation = 'ReLU', no_activation_last = False):
 	modules = []
 	if dropout > 0:
 		modules.append(nn.Dropout(p = dropout))
@@ -94,5 +94,8 @@ def create_nn(inputdim, outputdim, dropout = 0.6, layers = [100, 100], activatio
 		modules.append(nn.Linear(prevdim, hidden, bias = True))
 		modules.append(act)
 		prevdim = hidden
+
+	if no_activation_last:
+		modules = modules[:-1]
 
 	return nn.Sequential(*modules)

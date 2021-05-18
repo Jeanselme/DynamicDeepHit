@@ -29,7 +29,7 @@ class DynamicDeepHitTorch(nn.Module):
 								bias=False, batch_first=True)
 
 		# Longitudinal network
-		self.longitudinal = create_nn(hidden_rnn, input_dim, **long_param)
+		self.longitudinal = create_nn(hidden_rnn, input_dim, no_activation_last = True, **long_param)
 
 		# Attention mechanism
 		self.attention = create_nn(input_dim + hidden_rnn, 1, **att_param)
@@ -61,6 +61,8 @@ class DynamicDeepHitTorch(nn.Module):
 		## Extract last observation (the one used for predictions)
 		last_observations_idx = (~inputmask).sum(axis = 1)
 		last_observations = torch.cat([x[i, j - 1].repeat(1, x.size(1), 1) for i, j in enumerate(last_observations_idx)], 0) 
+		for i, j in enumerate(last_observations_idx):
+			inputmask[i, j - 1] = True # Ignore last observation in the attention
 
 		## Concatenate all previous with new to measure attention
 		concatenation = torch.cat([hidden, last_observations], -1)
@@ -71,9 +73,12 @@ class DynamicDeepHitTorch(nn.Module):
 		attention = self.attention_soft(attention)
 
 		# Risk networks
+		# The original paper is not clear on how the last observation is considered
+		# combined with the temporal sum, we are using the hidden state
 		outcomes = []
 		attention = attention.unsqueeze(2).repeat(1, 1, hidden.size(2))
-		hidden_attentive = torch.sum(attention * hidden, axis = 1)
+		hidden_attentive = torch.sum(attention * hidden, axis = 1) 
+		hidden_attentive += torch.stack([hidden[i, j - 1] for i, j in enumerate(last_observations_idx)]) # Add skip connection
 		for cs_nn in self.cause_specific:
 			outcomes.append(cs_nn(hidden_attentive))
 
