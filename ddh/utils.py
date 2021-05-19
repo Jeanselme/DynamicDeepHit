@@ -43,7 +43,7 @@ def train_ddh(model,
 
 		model.eval()
 		if cuda:
-			x_valid, t_valid, e_valid = xb.cuda(), t_valid.cuda(), e_valid.cuda()
+			x_valid, t_valid, e_valid = x_valid.cuda(), t_valid.cuda(), e_valid.cuda()
 		
 		valid_loss = total_loss(model,
 								x_valid,
