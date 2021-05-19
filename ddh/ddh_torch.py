@@ -38,7 +38,7 @@ class DynamicDeepHitTorch(nn.Module):
 		# Cause specific network
 		self.cause_specific = []
 		for r in range(self.risks):
-			self.cause_specific.append(create_nn(hidden_rnn, output_dim, **cs_param))
+			self.cause_specific.append(create_nn(input_dim + hidden_rnn, output_dim, **cs_param))
 		self.cause_specific = nn.ModuleList(self.cause_specific)
 
 		# Probability
@@ -64,25 +64,29 @@ class DynamicDeepHitTorch(nn.Module):
 
 		# Attention using last observation to predict weight of all previously observed
 		## Extract last observation (the one used for predictions)
-		last_observations_idx = ((~inputmask).sum(axis = 1) - 1).unsqueeze(1).repeat(1, x.size(1))
+		last_observations = ((~inputmask).sum(axis = 1) - 1)
+		last_observations_idx = last_observations.unsqueeze(1).repeat(1, x.size(1))
 		index = torch.arange(x.size(1)).repeat(x.size(0), 1).to(device)
+
 		last = index == last_observations_idx
+		x_last = x[last]
 
 		## Concatenate all previous with new to measure attention
-		concatenation = torch.cat([hidden, x[last].unsqueeze(1).repeat(1, x.size(1), 1)], -1)
+		concatenation = torch.cat([hidden, x_last.unsqueeze(1).repeat(1, x.size(1), 1)], -1)
 
 		## Compute attention and normalize
 		attention = self.attention(concatenation).squeeze(-1)
 		attention[index >= last_observations_idx] = -1e10 # Want soft max to be zero as values not observed
-		attention = self.attention_soft(attention)
+		attention[last_observations > 0] = self.attention_soft(attention[last_observations > 0]) # Weight previous observation
+		attention[last_observations == 0] = 0 # No context for only one observation
 
 		# Risk networks
-		# The original paper is not clear on how the last observation is considered
-		# combined with the temporal sum, we are using the hidden state
+		# The original paper is not clear on how the last observation is
+		# combined with the temporal sum, other code was concatenating them
 		outcomes = []
 		attention = attention.unsqueeze(2).repeat(1, 1, hidden.size(2))
 		hidden_attentive = torch.sum(attention * hidden, axis = 1)
-		hidden_attentive += hidden[last]
+		hidden_attentive = torch.cat([hidden_attentive, x_last], 1)
 		for cs_nn in self.cause_specific:
 			outcomes.append(cs_nn(hidden_attentive))
 
