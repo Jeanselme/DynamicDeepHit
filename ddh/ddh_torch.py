@@ -32,13 +32,13 @@ class DynamicDeepHitTorch(nn.Module):
 		self.longitudinal = create_nn(hidden_rnn, input_dim, no_activation_last = True, **long_param)
 
 		# Attention mechanism
-		self.attention = create_nn(input_dim + hidden_rnn, 1, **att_param)
+		self.attention = create_nn(input_dim + hidden_rnn, 1, no_activation_last = True, **att_param)
 		self.attention_soft = nn.Softmax(1) # On temporal dimension
 
 		# Cause specific network
 		self.cause_specific = []
 		for r in range(self.risks):
-			self.cause_specific.append(create_nn(input_dim + hidden_rnn, output_dim, **cs_param))
+			self.cause_specific.append(create_nn(input_dim + hidden_rnn, output_dim, no_activation_last = True, **cs_param))
 		self.cause_specific = nn.ModuleList(self.cause_specific)
 
 		# Probability

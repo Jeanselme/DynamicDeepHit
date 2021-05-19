@@ -5,31 +5,36 @@ def negative_log_likelihood(outcomes, cif, t, e):
         Compute the log likelihood loss 
         This function is used to compute the survival loss
     """
-    # Censored
-    loss = torch.sum(torch.log(1 - torch.sum(cif[e == 0], axis = 1) + 1e-10))
+    loss, censored_cif = 0, 0
+    for k, ok in enumerate(outcomes):
+        # Censored cif
+        censored_cif += cif[k][e == 0][:, t[e == 0]]
 
-    # Uncensored
-    for i, (ei, ti) in enumerate(zip(e, t)):
-        if ei > 0:
-            loss += torch.log(outcomes[ei-1][i, ti] + 1e-10)
+        # Uncensored
+        selection = e == (k + 1)
+        loss += torch.sum(torch.log(ok[selection][:, t[selection]] + 1e-10))
 
+    # Censored loss
+    loss += torch.sum(torch.log(1 - censored_cif + 1e-10))
     return - loss / len(outcomes)
 
-def ranking_loss(outcomes, cif, t, e, sigma):
+def ranking_loss(cif, t, e, sigma):
     """
         Penalize wrong ordering of probability
         Equivalent to a C Index
         This function is used to penalize wrong ordering in the survival prediction
     """
     loss = 0
-    for k in range(cif.shape[1]):
-        for ci, ti in zip(cif[e-1 == k][:, k], t[e-1 == k]):
+    # Data ordered by time
+    for k, cifk in enumerate(cif):
+        for ci, ti in zip(cifk[e-1 == k], t[e-1 == k]):
             # For all events: all patients that didn't experience event before
             # must have a lower risk for that cause
-            if len(outcomes[k][t > ti]) > 0:
-                loss += torch.mean(torch.DoubleTensor([torch.exp((- ci + torch.sum(oj[:ti+1])) / sigma) for oj in outcomes[k][t > ti]]))
+            if torch.sum(t > ti) > 0:
+                # TODO: When data are sorted in time -> wan we make it even faster ?
+                loss += torch.mean(torch.exp((cifk[t > ti][:, ti] - ci[ti])) / sigma)
 
-    return loss / len(outcomes)
+    return loss / len(cif)
 
 def longitudinal_loss(longitudinal_prediction, x):
     """
@@ -42,32 +47,31 @@ def longitudinal_loss(longitudinal_prediction, x):
         NB: Original paper mentions possibility of different alphas for each risk
         But take same for all (for ranking loss)
     """
-    length = (~torch.isnan(x[:,:,0])).sum(axis = 1)
-
-    # Select all predictions until the last observed
-    predictions = torch.cat([longitudinal_prediction[i, :l - 1] for i, l in enumerate(length)], 0) 
-
-    # Select all observations that can be predicted
-    observations = torch.cat([x[i, 1:l] for i, l in enumerate(length)], 0) 
-    return torch.nn.MSELoss(reduction = 'mean')(predictions, observations)
-
-def total_loss(model, x, t, e, alpha, beta, sigma):
-    longitudinal_prediction, outcomes = model(x)
-    t, e = t.int(), e.int()
-    
+    length = (~torch.isnan(x[:,:,0])).sum(axis = 1) - 1
     if x.is_cuda:
         device = x.get_device()
     else:
         device = torch.device("cpu")
 
+    # Create a grid of the column index
+    index = torch.arange(x.size(1)).repeat(x.size(0), 1).to(device)
+
+    # Select all predictions until the last observed
+    prediction_mask = index <= (length - 1).unsqueeze(1).repeat(1, x.size(1))
+
+    # Select all observations that can be predicted
+    observation_mask = index <= length.unsqueeze(1).repeat(1, x.size(1))
+    observation_mask[:, 0] = False # Remove first observation
+
+    return torch.nn.MSELoss(reduction = 'mean')(longitudinal_prediction[prediction_mask], x[observation_mask])
+
+def total_loss(model, x, t, e, alpha, beta, sigma):
+    longitudinal_prediction, outcomes = model(x)
+    t, e = t.long(), e.int()
+
     # Compute cumulative function from prediced outcomes
-    # max_time = output_dim
-    cif = torch.zeros((x.size(0), model.risks)).to(device)
-    
-    for k in range(model.risks):
-        for i, (ti, oi) in enumerate(zip(t, outcomes[k])):
-            cif[i, k] = torch.sum(oi[:ti+1])
+    cif = [torch.cumsum(ok, 1) for ok in outcomes]
 
     return (1 - alpha - beta) * longitudinal_loss(longitudinal_prediction, x) +\
-              alpha * ranking_loss(outcomes, cif, t, e, sigma) +\
+              alpha * ranking_loss(cif, t, e, sigma) +\
               beta * negative_log_likelihood(outcomes, cif, t, e)
