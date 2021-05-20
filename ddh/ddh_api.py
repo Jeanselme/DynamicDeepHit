@@ -167,7 +167,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 
 		if not isinstance(t, list):
 			t = [t]
-		t = self.discretize([t], self.split_time)[0][0]
+		t = self.discretize([t], self.split, self.split_time)[0][0]
 
 		if self.fitted:
 			batches = int(len(x)/bs) + 1
@@ -176,7 +176,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				xb = self._prepocess_test_data(x[j*bs:(j+1)*bs])
 				_, f = self.torch_model(xb)
 				for t_ in t:
-					scores[t_].append(torch.sum(f[int(risk) - 1][:, :t_+1], dim = 1).unsqueeze(1).detach().numpy())
+					scores[t_].append(torch.cumsum(f[int(risk) - 1], dim = 1)[:, t_].unsqueeze(1).detach().numpy())
 			return 1 - np.concatenate([np.concatenate(scores[t_], axis = 0) for t_ in t], axis = 1)
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
