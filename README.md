@@ -12,3 +12,4 @@ An example is available in the `examples` folder.
 
 ## TODOs
 - Full documentation
+- Further testing to ensure the model is reproducing the original paper's performance
