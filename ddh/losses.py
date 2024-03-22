@@ -8,11 +8,10 @@ def negative_log_likelihood(outcomes, cif, t, e):
     loss, censored_cif = 0, 0
     for k, ok in enumerate(outcomes):
         # Censored cif
-        censored_cif += cif[k][e == 0][:, t[e == 0]]
-
+        censored_cif += cif[k][e == 0][torch.arange((e == 0).sum()), t[e == 0]]
         # Uncensored
         selection = e == (k + 1)
-        loss += torch.sum(torch.log(ok[selection][:, t[selection]] + 1e-10))
+        loss += torch.sum(torch.log(ok[selection][torch.arange((selection).sum()), t[selection]] + 1e-10))
 
     # Censored loss
     loss += torch.sum(torch.log(1 - censored_cif + 1e-10))
@@ -32,7 +31,7 @@ def ranking_loss(cif, t, e, sigma):
             # must have a lower risk for that cause
             if torch.sum(t > ti) > 0:
                 # TODO: When data are sorted in time -> wan we make it even faster ?
-                loss += torch.mean(torch.exp((cifk[t > ti][:, ti] - ci[ti])) / sigma)
+                loss += torch.mean(torch.exp((cifk[t > ti][torch.arange((t > ti).sum()), ti] - ci[ti])) / sigma)
 
     return loss / len(cif)
 
