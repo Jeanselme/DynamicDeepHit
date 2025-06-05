@@ -156,7 +156,20 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 		_, _, _, x_val, t_val, e_val = processed_data
 		return total_loss(self.torch_model, x_val, t_val, e_val, 0, 1, 1).item()
 
-	def predict_survival(self, x, t, risk=1, all_step=False, bs=100):
+	def predict_survival(self, x, t, risk=1, all_step=False, fill_from_last=False, bs=100):
+		"""Predict survival function for the given data.
+		Args:
+			x (List of Array): Input data, where each element is a sequence of features for a patient.
+			t (Array): Time points at which to evaluate the survival function.
+			risk (int, optional): Risk index to predict. Defaults to 1.
+			all_step (bool, optional): If True, returns survival function for all time steps otherwise only last. 
+				Defaults to False.
+			fill_from_last (bool, optional): If True, return all steps from last time point to first. 
+				Defaults to False (index 0 is the first observed time, otherwise last observed point). 
+				Ignored if all_step is False.
+			bs (int, optional): Batch size for prediction. Defaults to 100.
+		Returns:
+			Array(point, time_eval, (time_step)): Predicted survival function for each patient at the specified time points."""
 		l = [len(x_) for x_ in x]
 
 		if all_step:
@@ -177,7 +190,20 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				_, f = self.torch_model(xb)
 				for t_ in t:
 					scores[t_].append(torch.cumsum(f[int(risk) - 1], dim = 1)[:, t_].unsqueeze(1).detach().numpy())
-			return 1 - np.concatenate([np.concatenate(scores[t_], axis = 0) for t_ in t], axis = 1)
+			predictions = np.concatenate([np.concatenate(scores[t_], axis = 0) for t_ in t], axis = 1)
+			if all_step:
+				results = np.full((len(l), len(t), max(l)), float('nan'))
+				start = 0
+				for i, li in enumerate(l):
+					if fill_from_last:
+						# Reverse to have index 0 containing last observed time
+						results[i, :, :li] = predictions[start:start+li][::-1].T
+					else:
+						results[i, :, :li] = predictions[start:start+li].T
+					start += li
+				return results
+			else:
+				return predictions
 		else:
 			raise Exception("The model has not been fitted yet. Please fit the " +
 							"model using the `fit` method on some training data " +
