@@ -190,7 +190,7 @@ class DynamicDeepHit(DeepRecurrentSurvivalMachines):
 				_, f = self.torch_model(xb)
 				for t_ in t:
 					scores[t_].append(torch.cumsum(f[int(risk) - 1], dim = 1)[:, t_].unsqueeze(1).detach().numpy())
-			predictions = np.concatenate([np.concatenate(scores[t_], axis = 0) for t_ in t], axis = 1)
+			predictions = 1 - np.concatenate([np.concatenate(scores[t_], axis = 0) for t_ in t], axis = 1)
 			if all_step:
 				results = np.full((len(l), len(t), max(l)), float('nan'))
 				start = 0
