@@ -4,12 +4,13 @@ This repository is a Pytorch implementation of the paper :  [Dynamic Deep Hit](h
 
 The code is based on the [Deep Survival Machines repository](https://github.com/autonlab/DeepSurvivalMachines) and use a similar module structure.
 
-
 ### Code Description
 All the code related to Dynamic Deep Hit is loacted in `ddh`. Only API should be used for application.
 
 An example is available in the `examples` folder.
 
-## TODOs
-- Full documentation
-- Further testing to ensure the model is reproducing the original paper's performance
+## Note
+- Deep Survival Machines library has been merged into auton_survival.
+```
+pip install auton_survival 
+```

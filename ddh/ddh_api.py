@@ -1,5 +1,5 @@
-from DeepSurvivalMachines.dsm.dsm_api import DeepRecurrentSurvivalMachines
-from dsm.utilities import _reshape_tensor_with_nans, _get_padded_features, _get_padded_targets
+from auton_survival.models.dsm import DeepRecurrentSurvivalMachines
+from auton_survival.models.dsm.utilities import _reshape_tensor_with_nans, _get_padded_features, _get_padded_targets
 from ddh.ddh_torch import DynamicDeepHitTorch
 from ddh.utils import train_ddh
 from ddh.losses import total_loss
