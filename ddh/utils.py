@@ -1,5 +1,5 @@
 from ddh.losses import total_loss
-from dsm.utilities import get_optimizer, _reshape_tensor_with_nans
+from auton_survival.models.dsm.utilities import get_optimizer, _reshape_tensor_with_nans
 
 import torch
 import torch.nn as nn
